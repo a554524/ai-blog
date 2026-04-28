@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { getAllPosts, getPostBySlug, getRelatedPosts } from '@/lib/posts';
 import { renderMDX } from '@/lib/mdx';
 import { ArrowRightIcon } from '@/components/icons';
+import { site } from '@/lib/site';
 
 type Params = { slug: string };
 
@@ -46,8 +47,23 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
   const rendered = await renderMDX(post.content);
   const related = getRelatedPosts(post, 3);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: post.title,
+    description: post.summary,
+    datePublished: post.date,
+    dateModified: post.updated ?? post.date,
+    author: { '@type': 'Person', name: site.author.name },
+    mainEntityOfPage: `${site.url.replace(/\/$/, '')}/posts/${post.slug}`,
+  };
+
   return (
     <main className="container-prose py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <article>
         <header className="mb-10 pb-8 border-b border-border">
           <div className="flex flex-wrap items-center gap-4 text-xs text-muted mb-4">

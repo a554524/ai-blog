@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { site } from '@/lib/site';
 import { ThemeToggle } from './theme-toggle';
+import { SearchBox } from './search-box';
 
 export function SiteHeader() {
   return (
@@ -27,6 +28,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <SearchBox />
           <ThemeToggle />
         </div>
       </div>
