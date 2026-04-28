@@ -2,33 +2,41 @@ import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
 import readingTime from 'reading-time';
-import type { Post, PostFrontmatter } from './types';
+import type { Post } from './types';
 
 const POSTS_DIR = path.join(process.cwd(), 'content', 'posts');
+
+function toISODate(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (typeof value === 'string') return value.slice(0, 10);
+  return String(value);
+}
 
 function parsePostFile(filePath: string, fileName: string): Post {
   const raw = fs.readFileSync(filePath, 'utf8');
   const { data, content } = matter(raw);
-  const fm = data as Partial<PostFrontmatter>;
+  const fm = data as Record<string, unknown>;
 
-  const slug = fm.slug ?? fileName.replace(/\.mdx?$/, '');
+  const slug = (fm.slug as string | undefined) ?? fileName.replace(/\.mdx?$/, '');
   if (!fm.title) throw new Error(`Post missing title: ${fileName}`);
-  if (!fm.date) throw new Error(`Post missing date: ${fileName}`);
+  const date = toISODate(fm.date);
+  if (!date) throw new Error(`Post missing date: ${fileName}`);
 
   const stats = readingTime(content);
   const wordCount = content.replace(/\s+/g, '').length;
 
   return {
-    title: fm.title,
+    title: String(fm.title),
     slug,
-    date: fm.date,
-    updated: fm.updated,
-    category: fm.category,
-    tags: fm.tags,
-    summary: fm.summary,
-    cover: fm.cover,
-    draft: fm.draft ?? false,
-    featured: fm.featured ?? false,
+    date,
+    updated: toISODate(fm.updated),
+    category: fm.category as string | undefined,
+    tags: fm.tags as readonly string[] | undefined,
+    summary: fm.summary as string | undefined,
+    cover: fm.cover as string | undefined,
+    draft: (fm.draft as boolean | undefined) ?? false,
+    featured: (fm.featured as boolean | undefined) ?? false,
     content,
     readingMinutes: Math.max(1, Math.round(stats.minutes)),
     wordCount,
