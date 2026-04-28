@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { getAllPosts, getPostBySlug, getRelatedPosts } from '@/lib/posts';
 import { renderMDX } from '@/lib/mdx';
 import { ArrowRightIcon } from '@/components/icons';
+import { GiscusComments } from '@/components/giscus-comments';
 import { site } from '@/lib/site';
 
 type Params = { slug: string };
@@ -94,6 +95,8 @@ export default async function PostPage({ params }: { params: Promise<Params> }) 
           </div>
         )}
       </article>
+
+      <GiscusComments />
 
       {related.length > 0 && (
         <aside className="mt-16 pt-8 border-t border-border">
