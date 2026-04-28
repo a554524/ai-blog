@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-sans: 'Inter', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --color-bg: 99% 0 0;
+    --color-surface: 97% 0 0;
+    --color-border: 90% 0 0;
+    --color-fg: 18% 0 0;
+    --color-muted: 50% 0 0;
+    --color-accent: 55% 0.18 250;
+  }
+
+  .dark {
+    --color-bg: 14% 0 0;
+    --color-surface: 18% 0 0;
+    --color-border: 28% 0 0;
+    --color-fg: 96% 0 0;
+    --color-muted: 65% 0 0;
+    --color-accent: 70% 0.17 250;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: oklch(var(--color-bg));
+    color: oklch(var(--color-fg));
+  }
+
+  ::selection {
+    background-color: oklch(var(--color-accent) / 0.2);
+  }
+
+  a {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+
+  a:hover {
+    color: oklch(var(--color-accent));
+  }
+}

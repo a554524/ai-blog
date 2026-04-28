@@ -1,0 +1,25 @@
+# deps
+node_modules/
+.pnp/
+.pnp.js
+
+# build
+.next/
+out/
+dist/
+
+# env
+.env
+.env*.local
+
+# runtime
+.DS_Store
+*.log
+npm-debug.log*
+
+# ide
+.vscode/
+.idea/
+
+# pagefind
+public/pagefind/
