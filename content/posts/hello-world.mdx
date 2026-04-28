@@ -1,0 +1,38 @@
+---
+title: Hello World · 这个博客在做什么
+slug: hello-world
+date: 2026-04-28
+category: 随笔
+tags: [开篇, 计划]
+summary: 开篇介绍——这个博客专注 AI 实战教程与免费 AI 工具整理,用简约工整的排版承载信息密度。
+featured: true
+---
+
+## 为什么开这个博客
+
+市面上 AI 工具百花齐放,但两个问题一直没解决好:
+
+1. **优质免费资源太分散**。新工具、免费额度、镜像站、开源项目,散落在推特、小报童、Reddit、Discord,缺一个整理沉淀的地方。
+2. **上手教程停留表面**。多数中文教程止步于"注册即用",缺乏工作流级别的实战教学。
+
+我想用这里承载两件事:
+
+- **实战教程**:Claude Code、Prompt 工程、Agent 开发、LLM 应用落地
+- **工具目录**:分类、筛选、带免费额度标注的 AI 工具清单,定期复核
+
+## 一个 TypeScript 例子
+
+```ts
+type Post = {
+  title: string;
+  tags: readonly string[];
+};
+
+function byTag(posts: Post[], tag: string): Post[] {
+  return posts.filter((p) => p.tags.includes(tag));
+}
+```
+
+## 接下来
+
+先写 5-10 篇种子内容,工具目录积累 30 条以上,再开放 Newsletter。

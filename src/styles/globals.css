@@ -116,6 +116,122 @@
  * 实用工具类
  * ========================================================= */
 
+/* =========================================================
+ * 文章正文排版 · PRD §7.0.4 排版合理
+ * ========================================================= */
+
+@layer components {
+  .prose-content {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+  @media (min-width: 768px) {
+    .prose-content {
+      font-size: 1.125rem;
+    }
+  }
+
+  .prose-content > * + * {
+    margin-top: 1.2em;
+  }
+
+  .prose-content h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: 2.5em;
+    margin-bottom: 0.8em;
+    letter-spacing: -0.01em;
+  }
+  .prose-content h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-top: 2em;
+    margin-bottom: 0.6em;
+  }
+
+  .prose-content ul,
+  .prose-content ol {
+    padding-left: 1.5em;
+  }
+  .prose-content ul {
+    list-style: disc;
+  }
+  .prose-content ol {
+    list-style: decimal;
+  }
+  .prose-content li + li {
+    margin-top: 0.4em;
+  }
+
+  .prose-content blockquote {
+    border-left: 2px solid oklch(var(--color-border));
+    padding-left: 1rem;
+    color: oklch(var(--color-muted));
+    font-style: normal;
+  }
+
+  .prose-content code:not(pre code) {
+    font-size: 0.9em;
+    padding: 0.15em 0.4em;
+    border-radius: 0.25rem;
+    background-color: oklch(var(--color-surface));
+    border: 1px solid oklch(var(--color-border));
+  }
+
+  .prose-content pre {
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid oklch(var(--color-border));
+    overflow-x: auto;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    background-color: oklch(var(--color-surface));
+  }
+  .prose-content pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+  }
+
+  /* Shiki 双主题支持:根据 .dark class 切换 */
+  .dark .prose-content .shiki,
+  .dark .prose-content .shiki span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+  }
+
+  .prose-content hr {
+    border: 0;
+    border-top: 1px solid oklch(var(--color-border));
+    margin: 3em 0;
+  }
+
+  .prose-content table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+  }
+  .prose-content th,
+  .prose-content td {
+    border: 1px solid oklch(var(--color-border));
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+  .prose-content th {
+    background-color: oklch(var(--color-surface));
+    font-weight: 600;
+  }
+
+  .prose-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+  }
+}
+
 @layer utilities {
   /* 容器 */
   .container-page {

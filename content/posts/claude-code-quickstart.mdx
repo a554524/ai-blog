@@ -1,0 +1,48 @@
+---
+title: Claude Code 五分钟上手指南
+slug: claude-code-quickstart
+date: 2026-04-26
+category: 教程
+tags: [Claude Code, Agent, 入门]
+summary: 从零到跑起一个自动写代码的终端 Agent,涵盖安装、登录、第一条指令与常用工作流。
+---
+
+## 什么是 Claude Code
+
+Claude Code 是 Anthropic 官方的终端 AI 编码助手,能读写你的文件、跑命令、接 MCP 服务器。相比网页聊天,它能直接操作代码库。
+
+## 安装
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+或者用 Homebrew:
+
+```bash
+brew install claude-code
+```
+
+## 第一次使用
+
+进入项目目录,运行:
+
+```bash
+cd your-project
+claude
+```
+
+首次会引导你登录。之后就可以自然语言下指令:
+
+> 帮我把 src/utils 下所有的 var 改成 const,然后跑测试
+
+## 几个常用技巧
+
+- **`/clear`** 清空上下文,开始新任务
+- **`@path/to/file`** 直接引用文件
+- **`!command`** 执行 shell 命令
+- **`/plan`** 进入只读规划模式
+
+## 下一步
+
+后续我会写一篇如何用 Claude Code 自动写测试的实战,敬请期待。
