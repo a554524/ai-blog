@@ -1,64 +1,58 @@
-# 部署到 Vercel(全流程)
+# 部署
 
-从本地 Git 仓库到公网可访问,全程免费,大概 10 分钟。
+## 当前状态
 
-## 步骤 1:推到 GitHub
+| 平台 | 域名 | 状态 |
+|------|------|------|
+| Cloudflare Pages | https://ai-blog-61z.pages.dev | ✅ 生产 |
+| Vercel | ai-blog-swart-five.vercel.app | 已配置但被 SSO 保护拦截,备用 |
+| GitHub | https://github.com/a554524/ai-blog | ✅ 源码 |
 
-```bash
-# 登录 gh (浏览器会自动打开)
-gh auth login
-# 选:GitHub.com → HTTPS → Login with a web browser
-# 按提示复制 one-time code,到浏览器粘贴
+## 构建模式切换
 
-# 在 ~/ai-blog 下创建远端仓库并推送
-cd ~/ai-blog
-gh repo create ai-blog --public --source=. --remote=origin --push
-```
-
-完成后会输出仓库 URL,如 `https://github.com/<你的用户名>/ai-blog`。
-
-## 步骤 2:连 Vercel
-
-打开 https://vercel.com/new → Sign in with GitHub(如首次)。
-
-1. **Import Git Repository** → 选 `ai-blog`
-2. **Framework Preset**:Vercel 自动识别为 Next.js,无需改
-3. **Build Command**:保持默认 `npm run build`
-4. **Output Directory**:保持默认 `.next`
-5. **Environment Variables**(可选,缺失时优雅降级,不影响上线):
-   - `NEXT_PUBLIC_SITE_URL` = `https://<项目名>.vercel.app`(先用 Vercel 分配的,后面换自定义域名再改)
-   - `NEXT_PUBLIC_GISCUS_REPO` / `_REPO_ID` / `_CATEGORY` / `_CATEGORY_ID`(评论)
-   - `NEXT_PUBLIC_CF_ANALYTICS_TOKEN`(统计)
-6. **Deploy**
-
-等 2-3 分钟,Vercel 会给一个永久域名如 `https://ai-blog-xxx.vercel.app`。
-
-## 步骤 3:写文章 → 推送 → 自动部署
+由 `next.config.mjs` 中的 `BUILD_MODE` 环境变量控制:
 
 ```bash
-# 新文章放 content/posts/*.mdx,改工具放 content/tools/*.md
-git add -A
-git commit -m "post: 新文章标题"
-git push
+# 静态模式 (默认),输出 out/,部 Cloudflare Pages / 任何 CDN
+npm run build
+
+# 动态模式,走 Next.js Node 运行时,部 Vercel / 自建
+BUILD_MODE=dynamic npm run build
 ```
 
-GitHub Actions 先跑 CI(build + test),Vercel 收到 push 自动构建并发布。整条流水线不需要你手工干预。
+未来要加用户登录/收藏/ISR/API 路由时切 dynamic。
 
-## 步骤 4(可选):绑定自定义域名
+## Cloudflare Pages 部署
 
-1. 在 Vercel 项目 → Settings → Domains 添加你的域名
-2. 按页面提示,在你的域名注册商处加一条 CNAME 记录指向 `cname.vercel-dns.com`
-3. 等 DNS 生效(几分钟到几小时),Vercel 自动签 HTTPS 证书
+```bash
+# 构建静态产物
+npm run build
 
-之后把 `NEXT_PUBLIC_SITE_URL` 环境变量换成自定义域名,重新触发一次部署即可。
+# 部署 (需要 CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID 环境变量)
+export CLOUDFLARE_API_TOKEN=...
+export CLOUDFLARE_ACCOUNT_ID=d83188253c7c02411dadd510d6e50de8
+npx wrangler pages deploy out --project-name ai-blog --branch main
+```
 
-## 常见问题
+## GitHub Actions 自动部署 (建议)
 
-**Q: 只有文章变了也要全站重建吗?**
-A: 是。但 Next.js 15 增量静态生成快,30 篇文章级别的博客全站重建 < 1 分钟。
+`.github/workflows/ci.yml` 已配置 type-check + test + build。
+补一段 Pages 部署:
 
-**Q: Vercel 免费额度够用吗?**
-A: 个人博客完全够。免费版每月 100GB 带宽,单次构建 45 分钟内,对静态站绰绰有余。
+```yaml
+- name: Publish to Cloudflare Pages
+  uses: cloudflare/wrangler-action@v3
+  with:
+    apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    command: pages deploy out --project-name=ai-blog --branch=main
+```
 
-**Q: 想同时部署到 Cloudflare Pages?**
-A: 可以并用作为备份。Cloudflare Pages 也免费,国内访问更稳。仓库不变,两个平台都连同一个 GitHub 仓库即可。
+Secret 配置位置: https://github.com/a554524/ai-blog/settings/secrets/actions
+
+## 自定义域名绑定
+
+Cloudflare Pages 控制台 → 项目 → Custom domains → Set up a custom domain →
+输入你的域名 → 按提示改 DNS CNAME 指向 `ai-blog-61z.pages.dev`。
+
+HTTPS 证书自动签。
