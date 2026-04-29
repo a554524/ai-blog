@@ -3,6 +3,8 @@ import { getAllPosts, getAllTags, getAllCategories } from '@/lib/posts';
 import { getAllTools } from '@/lib/tools';
 import { site } from '@/lib/site';
 
+export const dynamic = 'force-static';
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const base = site.url.replace(/\/$/, '');
   const now = new Date();
