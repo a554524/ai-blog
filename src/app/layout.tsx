@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from '@/components/theme-provider';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
+import { FloatingWechat } from '@/components/floating-wechat';
 import { site } from '@/lib/site';
 import '@/styles/globals.css';
 
@@ -40,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <SiteHeader />
           <div className="flex-1">{children}</div>
           <SiteFooter />
+          <FloatingWechat />
         </ThemeProvider>
       </body>
     </html>

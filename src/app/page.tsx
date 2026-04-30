@@ -23,14 +23,14 @@ export default function HomePage() {
           <Link href="/tools" className="no-underline inline-flex items-center gap-1 hover:text-accent">
             AI 工具目录 <ArrowRightIcon size={16} />
           </Link>
-          <a href="#wechat" className="no-underline inline-flex items-center gap-1 hover:text-accent">
+          <Link href="/about#contact" className="no-underline inline-flex items-center gap-1 hover:text-accent">
             加微信交流 <ArrowRightIcon size={16} />
-          </a>
+          </Link>
         </div>
       </section>
 
-      {/* 板块 2:微信交流卡 */}
-      <div id="wechat">
+      {/* 板块 2:微信交流卡 (桌面已有右侧悬浮,这里仅在移动端显示兜底) */}
+      <div id="wechat" className="md:hidden">
         <WechatCard />
       </div>
 
