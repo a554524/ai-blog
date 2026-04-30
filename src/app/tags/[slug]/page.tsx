@@ -6,7 +6,7 @@ import { PostCard } from '@/components/post-card';
 type Params = { slug: string };
 
 export function generateStaticParams(): Params[] {
-  return getAllTags().map((t) => ({ slug: encodeURIComponent(t.tag) }));
+  return getAllTags().map((t) => ({ slug: t.tag }));
 }
 
 export async function generateMetadata({
