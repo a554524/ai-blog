@@ -1,4 +1,6 @@
 import Image from 'next/image';
+import Link from 'next/link';
+import { ArrowRightIcon } from './icons';
 
 /**
  * 首页微信交流卡
@@ -24,8 +26,14 @@ export function WechatCard() {
             留言说明来自博客,聊 Claude Code、Agent 架构、Prompt 工程、
             AI 工具避坑,或者单纯认识一下都行。
           </p>
-          <div className="mt-4 text-xs text-muted">
-            微信号:天空一声响 · 江苏南京
+          <div className="mt-4 flex items-center gap-4 text-xs text-muted">
+            <span>微信号:天空一声响 · 江苏南京</span>
+            <Link
+              href="/about#contact"
+              className="no-underline inline-flex items-center gap-1 hover:text-accent"
+            >
+              了解更多 <ArrowRightIcon size={12} />
+            </Link>
           </div>
         </div>
 
