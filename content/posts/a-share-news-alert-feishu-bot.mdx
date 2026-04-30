@@ -1,0 +1,387 @@
+---
+title: 把 A 股利空快讯做成飞书定时推送 —— 一次和 Claude Code 的完整协作
+slug: a-share-news-alert-feishu-bot
+date: 2026-04-30
+category: 实战
+tags: [Claude Code, A股, 飞书机器人, akshare, systemd, Python]
+summary: 从"我要新闻带出处"一句话,到每天 22:00 + 09:00 自动推送到飞书的利空黑名单。完整记录需求澄清、两个 regex bug、systemd 串联 ExecStartPost、以及 push 到 GitHub 私有仓。踩的每个坑和为什么没走弯路,都在这里。
+featured: false
+---
+
+这是一次典型的"周二下午随手做"的工程:需求一句话,实际跑通要填掉五六个坑。全程由 Claude Code 驱动,我只负责在分岔路口做选择。
+
+这篇文章记录了从**"新闻要机器人推给我,带出处和链接"**一句需求出发,到**每天自动推送、代码进私有仓**的完整过程。包括每一次澄清、每一个坑、每一次改方向。
+
+## 起点:已经在跑的模拟盘
+
+背景先交代一下。我有一条 A 股 T+1 超短线套利的模拟盘流水线跑了一段时间了:
+
+```
+akshare 拉行情
+  → 特征工程 (build_v2 / v4 / v5 / v7)
+  → 集成模型 (0.50·v4A + 0.30·v5B + 0.15·v7B + 0.05·v4B)
+  → rules_gate v2 分档 (A / B / C / D)
+  → 每天 09:31 输出 decision_<YYYYMMDD>.json
+  → 收盘后 15:47 结算 paper_portfolio.csv
+```
+
+10 万本金、最多 5 仓、等权 20%、单边费率 0.16%。这条链路跑得挺顺了,但少一块拼图 —— **盘前 A 股新闻的利空过滤**。
+
+模型看的是量价特征,看不到"某公司昨晚刚被立案调查"。这种新闻一出,第二天大概率低开砸盘。人肉盯财联社电报不现实,所以我扔了一句话给 Claude:
+
+> 新闻要机器人推给我,带出处和链接
+
+## 第一个选择:做不做利好?
+
+Claude 开工前先反问了一句。既然要"利空",那利好要不要对称做?这是一个关键分叉,做错会让需求膨胀一倍。我的原始意图是:**只要规避踩雷,不需要加仓信号**。
+
+给了三个选项:
+- A. 纯信息,利好利空都显示,不影响下单
+- B. 利空拉黑 + 利好加档位
+- C. 只做利空
+
+我选 A,但附加"信息要有股票名字,不只是代码"。
+
+这里的判断是:**B 会改策略,改完要重跑回测验证,今天做不完**。A 最轻,只影响消息展示层,可以当天上线。后面事实证明这个选择救了我 —— 中途我又改方向了,代价小。
+
+## 数据源:akshare 的坑
+
+akshare 里能抓 A 股快讯的接口有四个:
+
+```python
+ak.stock_info_global_cls(symbol="重点"/"全部")  # 财联社电报
+ak.stock_info_global_em()                        # 东方财富
+ak.stock_info_global_ths()                       # 同花顺
+ak.stock_info_global_sina()                      # 新浪
+```
+
+合并之后能拿到 800+ 条/天,去重后 600 左右。每条字段结构不完全一致,要手动对齐:
+
+```python
+def fetch_all() -> pd.DataFrame:
+    dfs = [fetch_cls(), fetch_em(), fetch_ths(), fetch_sina()]
+    dfs = [d for d in dfs if len(d) > 0]
+    # 字段对齐:标题/内容/发布时间/src
+    rows = []
+    for d in dfs:
+        sub = pd.DataFrame({
+            "标题": d.get("标题", ""),
+            "内容": d.get("内容", ""),
+            "发布时间": d.get("发布时间", ""),
+            "src": d.get("src", ""),
+        })
+        rows.append(sub)
+    return pd.concat(rows).drop_duplicates(subset=["标题"])
+```
+
+**第一个坑:akshare 这四个接口都不返回 URL。**
+
+这是个硬约束。你从标题能看到"泰格医药 Q1 净利同比下滑 70%",但没有"这条新闻在财联社的原文链接"。我一开始想拼 URL —— 翻了一下 CLS 的网站结构,发现需要 article ID,akshare 不返回 ID。
+
+走这条路要自己做爬虫,爬虫意味着反爬、IP 封禁、维护成本。**不值得**。于是改方案:**不给每条假 URL,给"频道入口"**。
+
+```python
+SOURCE_URLS = {
+    "cls_重点": "https://www.cls.cn/telegraph",
+    "cls_全部": "https://www.cls.cn/telegraph",
+    "em": "https://kuaixun.eastmoney.com/",
+    "ths": "https://news.10jqka.com.cn/realtimenews.html",
+    "sina": "https://finance.sina.com.cn/7x24/",
+}
+```
+
+消息里带一句"akshare 原始接口不带 URL,链接为频道入口,可去原站搜标题"。用户点进频道页自己搜,比给假链接强。**承认产品的边界是诚实设计**。
+
+## 利空分类:正则的两个血泪 bug
+
+有了新闻文本,接下来是分类。最朴素的办法:按关键词正则。我列了五类硬门:
+
+```python
+BEARISH_PATTERNS = {
+    "业绩爆雷": [
+        r"预(?:计)?亏(?:损)",
+        r"(?:净利润|营收|业绩)[^。]{0,20}?同比[^。]{0,10}?(?:下降|下滑|减少)[^。0-9]*?(?<![\d.])([5-9]\d|\d{3,})(?:\.\d+)?\s*%",
+        r"业绩[^。]{0,10}?(?:大幅下滑|大幅下降|爆雷|巨亏)",
+        r"由盈转亏",
+        r"预减(?:超|逾)?\d+",
+    ],
+    "股东减持": [r"拟减持", r"减持计划", r"减持(?:\S{0,4})?股份", r"清仓式减持"],
+    "监管处罚": [r"立案(?:调查|侦查)", r"行政处罚", r"警示函", r"终止上市", r"退市风险", r"被证监会"],
+    "停牌ST": [r"停牌(?!核查)", r"\*?ST\b", r"特别处理", r"风险警示"],
+    "债务风险": [r"债务违约", r"债券违约", r"本息逾期", r"破产(?:清算|重整)", r"资金链(?:断裂|紧张)"],
+}
+```
+
+第一版跑完,**29 条新闻命中分类,0 条进黑名单。**
+
+怎么回事?
+
+### Bug 1:6 位代码抽不到
+
+黑名单要求"匹配到 category AND 匹配到 code6"。category 对了,code6 没匹配到。我写了个 `CODE_RE = r"(?<![0-9])([036]\d{5})(?![0-9])"`,要求 6 位纯数字前后无其他数字。
+
+问题在于:**东方财富和财联社的新闻标题,通常是这个格式**:
+
+```
+泰格医药:一季度归母净利润同比下降 70.36%
+```
+
+标题里只有**公司简称**,没有代码。正文也经常不带代码。
+
+解法:加一个反查表。用 `ak.stock_info_a_code_name()` 拉 A 股全量名单(5510 行,3 秒),建立 `{公司简称: code6}` 映射,然后给标题加个开头正则:
+
+```python
+NAME_PREFIX_RE = re.compile(r"^[【\[]?([一-龥A-Z]{2,8})\s*[::]")
+
+def extract_codes(text: str) -> list[str]:
+    # 1. 直接命中 6 位代码
+    # ...CODE_RE finditer...
+
+    # 2. 标题开头公司名反查
+    m = NAME_PREFIX_RE.match(text.strip())
+    if m:
+        name = m.group(1)
+        code = _load_name_map().get(name)
+        if code:
+            out.append(code)
+    return out
+```
+
+重跑。**0 → 16 命中**。
+
+### Bug 2:全角冒号 vs 半角冒号
+
+16 条里还是漏了一个我肉眼能确认的:"泰格医药:一季度..."。
+
+我盯着正则看了一分钟没发现问题,让 Claude 打印匹配过程:
+
+```python
+>>> NAME_PREFIX_RE.match("泰格医药:一季度归母净利润同比下降 70.36%")
+None
+```
+
+再对比一下真实文本的字节:
+
+```
+>>> ord(':')    # 我正则里写的
+58              # U+003A 半角冒号
+>>> ord(':')    # 新闻标题里实际用的
+65306           # U+FF1A 全角冒号
+```
+
+**正则 `[::]` 里是两个一模一样的 U+003A**。肉眼看不出,但 Python 认。
+
+改成真正包含两种:
+
+```python
+NAME_PREFIX_RE = re.compile(r"^[【\[]?([一-龥A-Z]{2,8})\s*[::]")
+#                                                        ^全角 ^半角
+```
+
+重跑。**16 → 29**。300212(易华录)立案调查、300272、300998、300120 都进来了。
+
+**教训**:中文文本正则,冒号、括号、引号、逗号、破折号都有**全角和半角两套**。批量处理文本时第一步是 normalize,或者正则字符类里**一次列完两套**。
+
+## 推送管道:钥匙从哪儿取
+
+分类搞定,下一步是把消息发到飞书。我已经有一个 `send_text.py` 可以接受 `(chat_id, text)` 参数,问题在于 **chat_id 从哪来**?
+
+我的飞书 bot 有一个 `kv.py` 模块,用 SQLite 存键值对。之前聊天时我把默认群的 `chat_id` 存过,key 是 `default_chat_id`:
+
+```python
+def push(msg: str) -> None:
+    sys.path.insert(0, str(BOT_DIR))
+    from kv import kv_get
+
+    chat_id = kv_get("default_chat_id", "")
+    if not chat_id:
+        print("[skip] kv 里没有 default_chat_id", file=sys.stderr)
+        return
+
+    app_id = os.environ.get("FEISHU_APP_ID")
+    app_secret = os.environ.get("FEISHU_APP_SECRET")
+    if not app_id or not app_secret:
+        print("[skip] 环境变量未设置,跳过推送", file=sys.stderr)
+        return
+
+    env = {**os.environ, "FEISHU_APP_ID": app_id, "FEISHU_APP_SECRET": app_secret}
+    subprocess.run([str(PYTHON), str(SEND_TEXT), chat_id, msg], env=env, check=True)
+```
+
+注意这里两个**优雅降级**:
+- 没 chat_id → 跳过,打印原因
+- 没环境变量 → 跳过,打印原因
+
+这样手动跑脚本调试(shell 里没配环境变量)的时候不会崩,systemd 跑(已注入环境变量)的时候正常推送。**脚本应该同时能手动和定时运行,不做额外分支**。
+
+## systemd:ExecStartPost 串联
+
+定时用 systemd user timer。我已经有一个 `stock-news-fetch.service`/`.timer` 跑 fetch_news.py,现在要让它后面跟着跑 news_push.py。
+
+有三个选择:
+1. 写一个新 service 专门推送,加 `Requires=stock-news-fetch.service`
+2. 用 `ExecStartPost=` 在同一个 service 里串联
+3. 在 Python 脚本末尾直接 import news_push 调一次
+
+选 2。理由:ExecStartPost **天然保证顺序**,而且失败不会触发 Requires 带来的递归依赖;ExecStart 失败时 ExecStartPost 也不会跑,符合"没数据就别推"的语义。
+
+最终的 service 文件:
+
+```ini
+[Unit]
+Description=Stock news fetch (CLS+EM+THS+Sina) for next-day blacklist
+After=network-online.target
+OnFailure=stock-alert@%n.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/feishu-claude-bot/stock
+Environment=FEISHU_APP_ID=cli_a937ad2c6bb85cc2
+Environment=FEISHU_APP_SECRET=***
+ExecStart=%h/feishu-claude-bot/venv/bin/python %h/feishu-claude-bot/stock/fetch_news.py
+ExecStartPost=%h/feishu-claude-bot/venv/bin/python %h/feishu-claude-bot/stock/news_push.py
+StandardOutput=append:%h/feishu-claude-bot/stock/paper_trading/news_fetch.systemd.log
+StandardError=append:%h/feishu-claude-bot/stock/paper_trading/news_fetch.systemd.log
+```
+
+几个关键点:
+- `%h` 是 systemd 里的 HOME 占位符,避免硬编码 `/home/mi`
+- `Environment=` 直接注进进程环境,不需要走 EnvironmentFile
+- `OnFailure=` 指向一个 alert service,失败自动发告警(这是我之前搭好的基础设施)
+
+## 中途改方向:利好不做了
+
+系统已经跑通一次,晚上 22:00 推送成功。我给 Claude 的任务是"继续加利好分类",这时候我改主意了:
+
+> 调好了,给我推送消息就行,以后每天晚 10 早 9 点各给我推一次
+
+**需求方向完全变了**:从"加利好功能"转成"加一个时段"。Claude 正在写 `classify_bullish`,但还没写完下游的 `build_whitelist`。
+
+这是真实开发里最常见的场景 —— **需求变更不是在 PRD 阶段,是在代码写到一半时**。正确的反应是:
+1. **立即停手**,不要把半成品强行完成
+2. **回滚未完成的改动**,回到最近的稳定点
+3. **按新需求重排**
+
+Claude 把刚加的 `classify_bullish` 函数撤回(留下 BULLISH_PATTERNS 数据,因为第二天如果要恢复利好方向,这个常量还能用),然后改 timer。
+
+```ini
+[Timer]
+OnCalendar=Mon..Fri 22:00:00
+OnCalendar=Mon..Fri 09:00:00
+Persistent=true
+```
+
+`OnCalendar=` 可以**叠加多行**,每一行都是独立触发点。这比写两个 timer service 干净。
+
+验证两个档期都注册了:
+
+```bash
+$ systemctl --user show stock-news-fetch.timer -p TimersCalendar
+TimersCalendar={ OnCalendar=Mon..Fri *-*-* 09:00:00 ; next_elapse=Wed 2026-04-29 09:00:00 CST }
+TimersCalendar={ OnCalendar=Mon..Fri *-*-* 22:00:00 ; next_elapse=Tue 2026-04-28 22:00:00 CST }
+```
+
+`systemctl list-timers` 默认只显示**最近一个**触发点,很容易误判。用 `show -p TimersCalendar` 才能看全。
+
+## 推送后的第一天:模型正确纠偏
+
+第二天早上 09:00,飞书收到第二条推送。同时 09:31 决策脚本跑完,输出 `decision_20260429_0931.json`:
+
+```json
+{
+  "decisions": [
+    {"code6": "000925", "tier": "C", "decision": "OBSERVE",
+     "reason": "观察(C 档亏 4% 档 47%,零亏损约束下不 BUY)"},
+    {"code6": "603318", "tier": "C", "decision": "OBSERVE", "reason": "..."},
+    {"code6": "003036", "tier": "C", "decision": "OBSERVE", "reason": "..."}
+  ]
+}
+```
+
+**三只全 OBSERVE,空仓一天**。
+
+这里有个细节耐人寻味:前一天(4/28)也是 C 档,却买了,结果一单亏 1.75%、一单触发止损 -4%,合计 -1.21% 净值。今天这版更严 —— **C 档直接拒绝**,系统主动纠偏。
+
+账户状态:
+
+| 日期 | 操作 | 净值 | 累计 |
+|---|---|---|---|
+| 4/28 | 2 单 C 档,1 平 1 止损 | 98,786 | -1.21% |
+| 4/29 | 空仓(rules_gate 拒绝) | 98,786 | -1.21% |
+
+**模拟盘的价值不在单日盈亏,在暴露策略漏洞。** 昨天的亏损直接改进了今天的规则 —— 这比回测有用得多,因为回测不会被"情绪"干扰,线上会。
+
+## 收尾:push 到 GitHub 私有仓
+
+最后一步:把整个工程 push 到 GitHub,做异地备份。
+
+这里有个决策点:**仓库可见性 + 是否脱敏**。三个选项:
+1. Public + 彻底脱敏(飞书密钥轮换、data.db 删除、logs 清空)
+2. Private + 不脱敏
+3. Private + 脱敏(最稳但最麻烦)
+
+我选 2。私有仓就是图省事,密钥和聊天记录都在里面不是问题。**工程学意义上这不标准,但是务实**。
+
+写 `.gitignore` 前先检查有没有超 GitHub 单文件 100MB 硬限的:
+
+```bash
+$ find /home/mi/feishu-claude-bot -type f -size +90M -not -path "*/venv/*"
+/home/mi/feishu-claude-bot/stock/dataset/alpha25_all.parquet   # 1.2G
+/home/mi/feishu-claude-bot/.venv/.../claude                    # 228M
+```
+
+两个超限。`.venv` 整个排掉(pip 能重建),1.2GB 的 parquet 可以用 akshare 重新 build,也排掉。最终 `.gitignore`:
+
+```gitignore
+venv/
+.venv/
+__pycache__/
+*.pyc
+stock/dataset/alpha25_all.parquet
+.DS_Store
+.idea/
+.vscode/
+```
+
+然后:
+
+```bash
+git init -b main
+git add -A
+git commit -m "feat: full project snapshot"
+gh repo create feishu-claude-bot --private --source=. --remote=origin
+git push -u origin main
+```
+
+本地仓 595MB,推送完成。GitHub 会提示有 4 个 85-87MB 的 parquet 超过"推荐"的 50MB,但**只是 warning 不是 error**,能过。
+
+## 复盘:这次协作的几个关键判断
+
+5 个小时的真实工程,回头看,有这么几个**判断点**决定了顺畅度:
+
+**1. 需求澄清优先于动手** — Claude 第一件事不是写代码,是问"要不要做利好"。如果直接做了,我中途改方向的代价会放大 5 倍。
+
+**2. 承认数据源边界** — akshare 不返回 URL,不要硬拼假链接。给频道入口 + 在消息里说明,比假数据好。
+
+**3. 中文文本的全角/半角陷阱** — 标点符号的 Unicode 差异是隐形 bug,调试正则时第一步是打印 `ord()`。
+
+**4. 优雅降级而非环境分支** — 脚本不区分"手动跑"和"systemd 跑",靠 `os.environ.get` + 打印原因降级,两种路径走同一份代码。
+
+**5. systemd ExecStartPost 串联** — 比起起两个 service + Requires,一个 service 里用 ExecStartPost 更干净,失败语义也更对。
+
+**6. 需求变更时立即回滚未完成改动** — 不要因为"快写完了"硬推进。半成品代码比没写更危险,因为它看起来像能用。
+
+## 源码
+
+整套代码(飞书 bot + A 股模拟盘流水线 + 新闻推送)已经推到:
+
+```
+https://github.com/a554524/feishu-claude-bot  (私有)
+```
+
+新闻这部分的入口:
+- `stock/fetch_news.py` — 抓取 + 分类 + 生成 blacklist/whitelist CSV
+- `stock/news_push.py` — 读 CSV,组消息,调 `send_text.py` 推飞书
+- `~/.config/systemd/user/stock-news-fetch.{service,timer}` — 定时触发
+
+下一步计划:**30 天真实盘验证**,Day 2 已经过了,空仓。继续观察 rules_gate v2 的零亏损约束在多少样本下会开仓。
