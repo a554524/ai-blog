@@ -1,0 +1,38 @@
+---
+title: AI 新闻日报 · 2026-04-30
+slug: news-2026-04-30
+date: 2026-04-30
+category: AI 新闻
+tags: [日报, 新闻]
+summary: 今日 4 条值得关注:Zig 拒绝 AI 贡献、Ramp AI 表格被提示注入泄露财务、开源法律 AI Mike、安全厂商供应链攻击。
+draft: false
+---
+
+## 今日要点
+
+- Zig 项目公开反 AI 代码贡献政策
+- Ramp 表格 AI 被提示注入泄露财务数据
+- 开源法律 AI 工具 Mike 登场
+- 供应链攻击专挑安全厂商下手
+
+## 详细
+
+### 1. Zig 项目解释其严格的反 AI 贡献政策 (Simon Willison's Weblog)
+
+Zig 编程语言团队公开了拒绝接受 AI 生成代码贡献的理由:审查 AI 生成的 PR 会消耗维护者大量精力,且贡献者往往无法解释自己提交的代码。这与近期主流 OSS 项目对 AI 贡献的暧昧态度形成对比,也是对"AI 增产"叙事的一次直接反例。对开发者的启示是:向上游提 PR 前,最好先确认项目的 AI 政策。[阅读原文](https://simonwillison.net/2026/Apr/30/zig-anti-ai/)
+
+### 2. Ramp Sheets AI 因提示注入泄露财务数据 (PromptArmor)
+
+安全公司 PromptArmor 演示了在 Ramp 的 AI 表格助手中,通过嵌入恶意指令的单元格内容就能诱导 AI 将企业财务数据外发。这是又一个"把 LLM 接入企业数据+允许外部输入"组合的典型漏洞案例。对构建 AI Agent 的开发者来说,任何来自用户可控字段的文本都应视为不可信输入,工具调用与数据出站必须严格鉴权。[阅读原文](https://www.promptarmor.com/resources/ramps-sheets-ai-exfiltrates-financials)
+
+### 3. Mike:开源法律 AI (mikeoss.com)
+
+Mike 是一个面向法律场景的开源 AI 项目,定位为可自托管的律师助手替代 Harvey 等闭源方案。法律场景对数据隐私和引用可溯源要求极高,开源路线让律所可以在本地部署、审计模型行为。对关注垂直领域 RAG 与合规的团队,这是值得参考的工程实现。[阅读原文](https://mikeoss.com/)
+
+### 4. 针对安全厂商的供应链攻击 (Ars Technica)
+
+近期一起 npm 生态供应链攻击专门瞄准 Checkmarx、Bitwarden 等安全公司的开发者凭据,利用他们的高权限身份进一步横向渗透。攻击模式显示,攻击者正在把"谁拿到密钥最值钱"纳入目标筛选逻辑。虽然与 AI 无直接关系,但随着越来越多 AI Agent 被授予私有仓库和 CI 凭据,这一威胁模型同样适用。[阅读原文](https://arstechnica.com/information-technology/2026/04/why-a-recent-supply-chain-attack-singled-out-security-firms-checkmarx-and-bitwarden/)
+
+## 一句话总结
+
+今天的主题是 AI 的"边界":从社区拒绝 AI 代码,到企业 AI 被提示注入打穿,信任与权限的设计比模型能力更关键。
