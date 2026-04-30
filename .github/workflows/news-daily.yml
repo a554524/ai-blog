@@ -1,0 +1,66 @@
+name: AI 新闻日报
+
+on:
+  schedule:
+    # 每天北京时间 09:05 (UTC 01:05)
+    - cron: '5 1 * * *'
+  workflow_dispatch: {} # 允许手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Fetch blog-agent sources
+        run: |
+          mkdir -p .agent
+          curl -fsSL https://raw.githubusercontent.com/a554524/blog-agent/main/src/news.mjs -o .agent/news.mjs
+          curl -fsSL https://raw.githubusercontent.com/a554524/blog-agent/main/src/llm.mjs -o .agent/llm.mjs
+          curl -fsSL https://raw.githubusercontent.com/a554524/blog-agent/main/src/config.mjs -o .agent/config.mjs
+
+      - name: Install deps
+        run: npm install gray-matter@^4
+
+      - name: Generate news post
+        env:
+          BLOG_ROOT: ${{ github.workspace }}
+          MILLM_BASE_URL: ${{ secrets.MILLM_BASE_URL }}
+          MILLM_API_KEY: ${{ secrets.MILLM_API_KEY }}
+          MILLM_MODEL: ${{ secrets.MILLM_MODEL }}
+        run: |
+          cat > .agent/run.mjs <<'EOF'
+          import { generateDaily } from './news.mjs';
+          const r = await generateDaily();
+          if (r.message) console.log(r.message);
+          if (r.candidateCount !== undefined) console.log(`候选:${r.candidateCount} 条`);
+          console.log(`文件:${r.file}  written=${r.written}`);
+          EOF
+          node .agent/run.mjs
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "blog-bot"
+          git config user.email "bot@users.noreply.github.com"
+          if git status --porcelain content/posts/news | grep -q .; then
+            today=$(date -u -d '+8 hours' +%Y-%m-%d)
+            git add content/posts/news
+            git commit -m "news: AI 日报 ${today}"
+            git push
+          else
+            echo "无新文件,跳过"
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -rf .agent
