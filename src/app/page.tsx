@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getAllPosts } from '@/lib/posts';
 import { PostCard } from '@/components/post-card';
+import { WechatCard } from '@/components/wechat-card';
 import { ArrowRightIcon } from '@/components/icons';
 import { site } from '@/lib/site';
 
@@ -22,10 +23,18 @@ export default function HomePage() {
           <Link href="/tools" className="no-underline inline-flex items-center gap-1 hover:text-accent">
             AI 工具目录 <ArrowRightIcon size={16} />
           </Link>
+          <a href="#wechat" className="no-underline inline-flex items-center gap-1 hover:text-accent">
+            加微信交流 <ArrowRightIcon size={16} />
+          </a>
         </div>
       </section>
 
-      {/* 板块 2:最新文章 */}
+      {/* 板块 2:微信交流卡 */}
+      <div id="wechat">
+        <WechatCard />
+      </div>
+
+      {/* 板块 3:最新文章 */}
       <section className="py-16">
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-xl font-semibold">最新文章</h2>
