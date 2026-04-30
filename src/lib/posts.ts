@@ -45,16 +45,26 @@ function parsePostFile(filePath: string, fileName: string): Post {
 
 let cached: Post[] | null = null;
 
+function walkMarkdown(dir: string): { full: string; name: string }[] {
+  const out: { full: string; name: string }[] = [];
+  if (!fs.existsSync(dir)) return out;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...walkMarkdown(full));
+    } else if (/\.mdx?$/.test(entry.name)) {
+      out.push({ full, name: entry.name });
+    }
+  }
+  return out;
+}
+
 export function getAllPosts(): Post[] {
   if (cached) return cached;
-  if (!fs.existsSync(POSTS_DIR)) {
-    cached = [];
-    return cached;
-  }
 
-  const files = fs.readdirSync(POSTS_DIR).filter((f) => /\.mdx?$/.test(f));
+  const files = walkMarkdown(POSTS_DIR);
   const posts = files
-    .map((f) => parsePostFile(path.join(POSTS_DIR, f), f))
+    .map((f) => parsePostFile(f.full, f.name))
     .filter((p) => !p.draft)
     .sort((a, b) => (a.date < b.date ? 1 : -1));
 
