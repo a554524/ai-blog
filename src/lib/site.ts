@@ -10,7 +10,7 @@ export const site = {
   },
   nav: [
     { href: '/posts', label: '文章' },
-    { href: '/categories/AI%20%E6%96%B0%E9%97%BB', label: 'AI 新闻' },
+    { href: '/categories/AI-%E6%96%B0%E9%97%BB', label: 'AI 新闻' },
     { href: '/tools', label: 'AI 工具' },
     { href: '/archive', label: '归档' },
     { href: '/about', label: '关于' },
