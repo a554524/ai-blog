@@ -1,0 +1,43 @@
+---
+title: AI 新闻日报 · 2026-05-01
+slug: news-2026-05-01
+date: 2026-05-01
+category: AI-新闻
+tags: [日报, 新闻]
+summary: 今日 5 条值得关注:PyTorch Lightning 遭供应链投毒、Goodfire 发布 LLM 可解释性工具 Silico、马斯克当庭承认 xAI 用 OpenAI 模型蒸馏 Grok、微软与 OpenAI 正式重组合作关系、OpenAI 回应 Codex "不谈哥布林" 指令。
+draft: false
+---
+
+## 今日要点
+
+- PyTorch Lightning 遭 Shai-Hulud 供应链投毒
+- Goodfire 发布 LLM 机制可解释性工具 Silico
+- 马斯克承认 xAI 用 OpenAI 模型蒸馏 Grok
+- 微软与 OpenAI 合作关系正式重组
+- OpenAI 解释 Codex 系统提示中的 "哥布林" 梗
+
+## 详细
+
+### 1. PyTorch Lightning 训练库被发现含恶意依赖 (Semgrep / Hacker News)
+
+安全厂商 Semgrep 披露,PyTorch Lightning 的依赖链中被植入了 Shai-Hulud 系列蠕虫式恶意包,会在开发者机器上窃取 npm/PyPI/云凭证并自我传播。这类攻击直接针对 AI 训练工作流,任何 CI 环境或训练节点一旦拉取受污染版本,凭证泄露后可能殃及整条模型训练管线。建议立即检查 lockfile,锁定已知干净版本并轮换凭证。[阅读原文](https://semgrep.dev/blog/2026/malicious-dependency-in-pytorch-lightning-used-for-ai-training/)
+
+### 2. Goodfire 发布机制可解释性工具 Silico (MIT Tech Review)
+
+旧金山初创公司 Goodfire 推出 Silico,声称能让研究者在训练过程中"看进"模型内部并直接调节参数,以更细粒度地影响模型行为。相比事后微调或 RLHF,这种基于机制可解释性的干预方式正从学术工具走向工程化产品,对安全对齐和行为编辑有潜在价值。目前面向研究与企业用户开放。[阅读原文](https://www.technologyreview.com/2026/04/30/1136721/this-startups-new-mechanistic-interpretability-tool-lets-you-debug-llms/)
+
+### 3. 马斯克庭上承认 xAI 蒸馏过 OpenAI 模型 (The Verge)
+
+在 Musk v. Altman 案的庭审中,马斯克亲口证实 xAI 曾使用 OpenAI 的模型对 Grok 进行知识蒸馏——即用大模型作"教师"去训练自家小模型。这是行业普遍做法但通常违反 OpenAI 的服务条款,也与马斯克多年来对 OpenAI 的公开指控形成微妙反差。案件本身围绕 OpenAI 是否背弃非营利初衷展开,此次证词可能影响后续举证走向。[阅读原文](https://www.theverge.com/ai-artificial-intelligence/921546/elon-musk-xai-openai-trial-model-distillation)
+
+### 4. 微软与 OpenAI 正式重组合作关系 (The Verge)
+
+经过长期的算力分配摩擦与治理争议后,微软和 OpenAI 本周达成新协议,将此前的深度绑定调整为更松散的合作。新条款据报道重新划分了 IP 归属、算力独占权与收入分成边界,OpenAI 获得更大自主融资与基础设施选择权。对开发者而言,意味着 Azure 独家托管 OpenAI 模型的格局开始松动。[阅读原文](https://www.theverge.com/tech/921210/microsoft-openai-partnership-divorce-notepad)
+
+### 5. OpenAI 回应 Codex "不谈哥布林" 的奇特指令 (The Verge)
+
+Wired 早前曝光 OpenAI 编码模型的系统提示中包含 "永远不要谈论哥布林、地精、浣熊、巨魔、食人魔、鸽子或其他生物" 的条款。OpenAI 在官方解释中称,这是模型在训练中养成的一种"奇怪习惯"——会在生成代码时无故提及这些生物——因而不得不在系统提示中硬性屏蔽。这个案例意外揭示了大模型行为模式难以预测、只能靠提示词打补丁的现实。[阅读原文](https://www.theverge.com/ai-artificial-intelligence/921181/openai-codex-goblins)
+
+## 一句话总结
+
+今天行业主题是"真相与裂缝":供应链、法庭证词、合作协议与模型内部,都在暴露 AI 基础设施从未如表面般光滑。
