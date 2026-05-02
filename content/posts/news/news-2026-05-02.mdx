@@ -1,0 +1,38 @@
+---
+title: AI 新闻日报 · 2026-05-02
+slug: news-2026-05-02
+date: 2026-05-02
+category: AI-新闻
+tags: [日报, 新闻]
+summary: 今日 4 条值得关注:Goodfire 发布 LLM 可解释性调试工具、马斯克庭审承认 xAI 蒸馏 OpenAI 模型、五角大楼与六家 AI 厂商签机密合作但排除 Anthropic、Adam 推出嵌入 Fusion 的 AI CAD 助手。
+draft: false
+---
+
+## 今日要点
+
+- Goodfire 推出 LLM 机制可解释性调试工具 Silico
+- 马斯克庭审承认 xAI 用 OpenAI 模型做蒸馏
+- 五角大楼与 OpenAI/Google/xAI 等签机密 AI 协议,Anthropic 出局
+- Adam 发布嵌入 Fusion 360 的 AI CAD 插件
+
+## 详细
+
+### 1. Goodfire 推出机制可解释性调试工具 Silico (MIT Tech Review)
+
+旧金山初创公司 Goodfire 发布了 Silico,让研究人员在训练过程中直接查看并调整模型内部参数,属于机制可解释性(mechanistic interpretability)方向的实用化尝试。此前这类工具多停留在论文阶段,而 Silico 把特征可视化和参数干预做成了工程化产品。对模型开发者来说,这是一个调试异常行为、定位有害特征的新选项,比黑盒的 prompt 工程更接近"根因分析"。[阅读原文](https://www.technologyreview.com/2026/04/30/1136721/this-startups-new-mechanistic-interpretability-tool-lets-you-debug-llms/)
+
+### 2. 马斯克庭审证实 xAI 蒸馏了 OpenAI 模型 (The Verge)
+
+在 Musk v. Altman 案的证词中,马斯克承认 xAI 使用 OpenAI 的模型作为"教师"训练 Grok,即行业常见的模型蒸馏(distillation)做法。这一表态在法庭语境下有其微妙性——OpenAI 的使用条款明确禁止用其输出训练竞品。对生态而言,此事再次把"合成数据来源合规性"推到台前,所有依赖闭源 API 输出做 SFT 的团队都需要重新审视条款。[阅读原文](https://www.theverge.com/ai-artificial-intelligence/921546/elon-musk-xai-openai-trial-model-distillation)
+
+### 3. 五角大楼签下六家 AI 厂商机密协议,独缺 Anthropic (The Verge)
+
+美国国防部宣布与 OpenAI、Google、Microsoft、Amazon、Nvidia、xAI 以及初创公司 Reflection 达成协议,允许在机密(classified)环境下部署这些厂商的 AI 工具。值得注意的是,此前承担过部分机密工作的 Anthropic 被排除在外,原因未公开披露,外界猜测与其使用政策中对军事/情报用途的限制有关。这反映了安全对齐立场严格的厂商在政府大单上可能付出的代价。[阅读原文](https://www.theverge.com/ai-artificial-intelligence/922113/pentagon-ai-classified-openai-google-nvidia)
+
+### 4. Adam 发布嵌入 Fusion 360 的 AI CAD 助手 (Hacker News)
+
+Adam 团队此前尝试过 text-to-3D 网页应用,但从机械工程师反馈中得出结论:工程师不接受直接吐 STL 的黑盒,而需要在现有 CAD 工具里获得对特征树(feature tree)的可见与可控辅助。新产品以 Fusion 360 插件形式发布,AI 的每一步操作都映射为可审阅的 CAD 特征。这是 AI 编程助手范式(Copilot/Cursor)向 CAD 领域迁移的一次具体实践。[阅读原文](https://fusion.adam.new/install)
+
+## 一句话总结
+
+今天的主题是 AI 从黑盒走向可控——无论是模型内部的可解释性调试,还是 CAD 领域对"可见特征树"的坚持,行业正尝试把不透明的生成过程拆成可审阅的步骤。
